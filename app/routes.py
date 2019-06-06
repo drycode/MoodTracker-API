@@ -1,5 +1,4 @@
 """This module contains all routing information for the Flask server."""
-
 from flask import jsonify, redirect, request
 from flask_login import current_user, login_user, login_required, logout_user
 
@@ -70,9 +69,11 @@ def post_mood():
     """Posts a mood value to a persisted datastore"""
     if request.json:
         req = request.json
+        mood_score = _verify_mood_range(req.get("mood_score", None))
 
     else:
         req = request.args
+        mood_score = _verify_mood_range(req.get("mood_score", type=int))
 
     if not req:
         return jsonify({"msg": "Must provide valid parameters."})
@@ -80,21 +81,22 @@ def post_mood():
     if not current_user:
         return redirect("/login")
 
-    mood_score = _verify_mood_range(req.get("mood_score", type=int, default=None))
-
-    print(current_user.get_id())
+    current_user.update_streaks(method_type="POST")
     entry = MoodEntry(user_id=current_user.get_id(), mood_score=mood_score)
-
     db.session.add(entry)
     db.session.commit()
     return jsonify(entry.asdict())
 
 
+@login_required
 @app.route("/mood", methods=["GET"])
 def get_moods():
     """Gets all mood values for a particular user"""
     if not current_user:
         return redirect("/login")
+
+    current_user.update_streaks(method_type="GET")
+    db.session.commit()
 
     return jsonify(
         {
@@ -103,7 +105,9 @@ def get_moods():
                 for entry in db.session.query(MoodEntry)
                 .filter(current_user.get_id() == MoodEntry.user_id)
                 .all()
-            ]
+            ],
+            "current_streak": current_user.get_current_streak(),
+            "best_streak": current_user.get_best_streak(),
         }
     )
 

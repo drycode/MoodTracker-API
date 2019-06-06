@@ -1,11 +1,12 @@
 """This module stores all db models for the flask application."""
 
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import OrderedDict
 
 from app import db, login
 from werkzeug.security import generate_password_hash, check_password_hash
 from flask_login import UserMixin
+from sqlalchemy import Date, cast
 
 
 STR_DATE_FRMT = "%b %d %Y %H:%M:%S"
@@ -35,8 +36,51 @@ class User(UserMixin, db.Model):
         """Verifies that user provided password matches hashed password."""
         return check_password_hash(self.password_hash, password)
 
-    def update_current_streak(self):
+    def update_streaks(self, method_type):
         """Updates current streak for a user using timestamps from mood entries."""
+        latest_entry_query = (
+            db.session.query(MoodEntry)
+            .filter(MoodEntry.user_id == self.id)
+            .order_by(MoodEntry.timestamp.desc())
+            .first()
+        )
+
+        if method_type == "GET":
+            latest_entry = latest_entry_query
+
+            try:
+                latest_entry_ts = latest_entry.timestamp
+            except AttributeError:
+                latest_entry_ts = datetime.utcnow()
+
+            if _check_should_update(latest_entry_ts) == "Reset":
+                self.current_streak = 0
+
+        if method_type == "POST":
+            # Retrieves the entry PRIOR to the current posted entry
+            latest_entry = latest_entry_query
+
+            try:
+                latest_entry_ts = latest_entry.timestamp
+            except AttributeError:
+                latest_entry_ts = None
+
+            most_recent_post = _check_should_update(latest_entry_ts)
+
+            if most_recent_post == "Yesterday":
+                self.current_streak += 1
+                if self.current_streak > self.best_streak:
+                    self.best_streak = self.current_streak
+            elif most_recent_post == "Reset":
+                self.current_streak = 0
+
+    def get_current_streak(self):
+        """Return current user streak"""
+        return self.current_streak
+
+    def get_best_streak(self):
+        """Return best user streak all time"""
+        return self.best_streak
 
     def asdict(self):
         """Returns instance of dict to represent User object."""
@@ -51,6 +95,28 @@ class User(UserMixin, db.Model):
     def __repr__(self):
         """Returns instance of string to represent User object."""
         return "<User {}>".format(self.username)
+
+
+def _check_should_update(latest_entry_ts):
+    """A users streak should be modified if a POST request is made on
+    the day immediately following the most recent post, or if a GET request
+    is made that shows the latest post being more than a day prior."""
+
+    # Triggers the very first post by a user to initiate a streak
+    if not latest_entry_ts:
+        return "Yesterday"
+
+    today = datetime.utcnow().date()
+    latest_post_day = latest_entry_ts.date()
+
+    if today == latest_post_day:
+        return "Today"
+
+    if today - timedelta(days=1) == latest_post_day:
+        return "Yesterday"
+
+    else:
+        return "Reset"
 
 
 @login.user_loader
@@ -85,6 +151,7 @@ class MoodEntry(db.Model):
 
 
 def _verify_mood_range(mood):
+    """Verifies that a mood_score instance is an integer of range 0-10"""
     if not isinstance(mood, int):
         raise TypeError
     if 0 > mood or mood > 10:
