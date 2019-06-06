@@ -9,4 +9,3 @@ class Config(object):
         "DATABASE_URL"
     ) or "sqlite:///" + os.path.join(basedir, "sqlite.db")
     SQLALCHEMY_TRACK_MODIFICATIONS = False
-
