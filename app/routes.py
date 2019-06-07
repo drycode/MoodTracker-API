@@ -1,9 +1,11 @@
 """This module contains all routing information for the Flask server."""
+from scipy.stats import percentileofscore
 from flask import jsonify, redirect, request
 from flask_login import current_user, login_user, login_required, logout_user
 
 from app import app, db
 from app.models import User, MoodEntry, _verify_mood_range
+from sqlalchemy import func
 
 
 @app.route("/health")
@@ -98,18 +100,22 @@ def get_moods():
     current_user.update_streaks(method_type="GET")
     db.session.commit()
 
-    return jsonify(
-        {
-            "mood_entries": [
-                entry.asdict()
-                for entry in db.session.query(MoodEntry)
-                .filter(current_user.get_id() == MoodEntry.user_id)
-                .all()
-            ],
-            "current_streak": current_user.get_current_streak(),
-            "best_streak": current_user.get_best_streak(),
-        }
-    )
+    response = {
+        "mood_entries": [
+            entry.asdict()
+            for entry in db.session.query(MoodEntry)
+            .filter(current_user.get_id() == MoodEntry.user_id)
+            .all()
+        ],
+        "current_streak": current_user.get_current_streak(),
+        "best_streak": current_user.get_best_streak(),
+    }
+
+    percentile = _calculate_streak_percentile()
+    if percentile >= 50:
+        response.update({"percentile": percentile})
+
+    return jsonify(response)
 
 
 def _create_user_helper(req):
@@ -124,3 +130,12 @@ def _create_user_helper(req):
         password = req.args.get("password", type=str)
 
     return username, email, password
+
+
+def _calculate_streak_percentile():
+    scores_arr = [
+        user.best_streak
+        for user in db.session.query(User).order_by(User.best_streak).all()
+    ]
+
+    return percentileofscore(scores_arr, current_user.get_best_streak())
