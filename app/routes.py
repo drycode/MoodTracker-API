@@ -1,5 +1,4 @@
 """This module contains all routing information for the Flask server."""
-from scipy.stats import percentileofscore
 from flask import jsonify, redirect, request
 from flask_login import current_user, login_user, login_required, logout_user
 
@@ -138,4 +137,19 @@ def _calculate_streak_percentile():
         for user in db.session.query(User).order_by(User.best_streak).all()
     ]
 
-    return percentileofscore(scores_arr, current_user.get_best_streak())
+    return _percentileofscore(scores_arr, current_user.get_best_streak())
+
+
+def _percentileofscore(scores_arr, score):
+    """Formula for percentile rank
+        PR = (L + (S / 2)) / N
+            L = values in array lower than score
+            S = values in array equal to score
+            N = total length of array
+        """
+    L = len([i for i in scores_arr if i < score])
+    S = len([i for i in scores_arr if i == score])
+    N = len(scores_arr)
+
+    percentile_rank = (L + (S / 2)) / N
+    return round(percentile_rank, 2) * 100
