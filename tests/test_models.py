@@ -1,41 +1,81 @@
-from datetime import datetime, timedelta
+from collections import OrderedDict
+from datetime import datetime
 
 import pytest
-from pytest import mark, raises
+from pytest import mark
 
-from app.helpers import _percentileofscore
-from app.models import User, MoodEntry, _check_should_update
+from app.models import User, MoodEntry
 
 
-@mark.parametrize(
-    "input, expected",
-    {
-        (datetime.utcnow(), "Today"),
-        (datetime.utcnow() - timedelta(days=1), "Yesterday"),
-        (datetime.utcnow() - timedelta(days=2), "Reset"),
-        (datetime.utcnow() - timedelta(days=2), "Reset"),
-        (None, "Yesterday"),
-    },
+user_1 = User(
+    id=234,
+    username="testuser123",
+    email="test@testuser.com",
+    current_streak=34,
+    best_streak=35,
 )
-def test__check_should_update(input, expected):
-    assert _check_should_update(input) == expected
+
+user_1.set_password("password1")
 
 
-def test__check_should_update_errors():
-    with pytest.raises(OverflowError):
-        _check_should_update(
-            datetime.utcnow() - timedelta(days=99979797979797979797979797979)
-        )
+def test_User():
+    assert repr(user_1) == "<User testuser123>"
 
 
-@mark.parametrize(
-    "scores_arr, score, expected",
-    {
-        ((1, 3, 2, 6, 8, 9, 10), 5, 43),
-        ((84, 299, 10384, 288, 134, 123, 2374, 18, 1239, 1237, 4), 670, 64),
-        ((1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 100), 2, 93),
-        ((0, 0, 0, 6, 8, 9, 10), 0, 21),
-    },
+def test_User_getters():
+    assert user_1.get_best_streak() == 35
+    assert user_1.get_current_streak() == 34
+    assert user_1.get_id() == "234"
+
+
+def test_User_instance():
+    assert isinstance(user_1, object) is True
+
+
+def test_secure_hashed_password():
+    print(user_1.password_hash)
+    assert (
+        user_1.password_hash
+        != "pbkdf2:sha256:150000$dPxxc0MU$7a7c903936dc2ebaccdb4db62bc6e22ecb4672c4e8fb81ed99c96e91bb708938"
+    )
+
+
+def test_check_password():
+    assert user_1.check_password("password1") is True
+
+
+def test_user_asdict():
+    assert user_1.asdict() == OrderedDict(
+        [
+            ("id", 234),
+            ("username", "testuser123"),
+            ("email", "test@testuser.com"),
+            ("current_streak", 34),
+            ("best_streak", 35),
+        ]
+    )
+
+
+mood_1 = MoodEntry(
+    id=1, user_id=234, mood_score=6, timestamp=datetime(2019, 6, 8, 21, 56, 5, 314037)
 )
-def test__percentileofscore(scores_arr, score, expected):
-    assert _percentileofscore(list(scores_arr), score) == expected
+
+
+def test_MoodEntry():
+    assert repr(mood_1) == "<MoodEntry Score:6 Time:2019-06-08 21:56:05.314037>"
+
+
+def test_mood_getters():
+    assert mood_1.get_timestamp() == datetime(2019, 6, 8, 21, 56, 5, 314037)
+
+
+def test_mood_asdict():
+    assert mood_1.asdict() == OrderedDict(
+        [
+            ("id", 1),
+            ("user_id", 234),
+            ("mood_score", 6),
+            ("timestamp", "Jun 08 2019 21:56:05"),
+        ]
+    )
+

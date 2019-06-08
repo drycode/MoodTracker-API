@@ -30,7 +30,6 @@ class User(UserMixin, db.Model):
     def set_password(self, password):
         """Converts user provided password to a SHA256 hashed password."""
         self.password_hash = generate_password_hash(password)
-        print(type(self.password_hash))
 
     def check_password(self, password):
         """Verifies that user provided password matches hashed password."""
