@@ -1,10 +1,12 @@
 """This module contains all routing information for the Flask server."""
-from flask import jsonify, redirect, request
+from flask import jsonify, redirect, request, abort
 from flask_login import current_user, login_user, login_required, logout_user
+from webargs.flaskparser import parser
 
-from app import app, db
-from app.models import User, MoodEntry, _verify_mood_range
-from sqlalchemy import func
+from app import app, db, errors
+from app.helpers import calculate_streak_percentile
+from app.models import User, MoodEntry
+from app.query_param_validators import user_args, mood_args
 
 
 @app.route("/health")
@@ -13,19 +15,19 @@ def check_server():
     return jsonify({"msg": "Flask is up and running!"})
 
 
-@app.route("/login", methods=["GET", "POST"])
+@app.route("/login", methods=["POST", "GET"])
 def login():
     """Allows users to login"""
     if current_user.is_authenticated:
         return redirect("/mood")
 
-    username, email, password = _create_user_helper(request)
+    args = parser.parse(user_args, request)
 
-    user = User.query.filter_by(username=username).first()
+    user = User.query.filter_by(username=args["username"]).first()
 
     if user is None:
-        user = User(username=str(username), email=str(email))
-        user.set_password(password)
+        user = User(username=str(args["username"]), email=str(args["email"]))
+        user.set_password(args["password"])
         db.session.add(user)
         db.session.commit()
 
@@ -38,7 +40,7 @@ def login():
         )
 
     login_user(user, remember=True)
-    if not user.check_password(password):
+    if not user.check_password(args["password"]):
         return jsonify("not a valid user")
 
     return redirect("/login")
@@ -61,26 +63,22 @@ def getuser():
 @app.route("/logout")
 def logout():
     """Allows users to logout"""
+    if not current_user.is_authenticated:
+        return redirect("/login")
     logout_user()
     return jsonify({"msg": "You have been logged out."})
 
 
+@login_required
 @app.route("/mood", methods=["POST"])
 def post_mood():
     """Posts a mood value to a persisted datastore"""
-    if request.json:
-        req = request.json
-        mood_score = _verify_mood_range(req.get("mood_score", None))
+    args = parser.parse(mood_args, request)
 
-    else:
-        req = request.args
-        mood_score = _verify_mood_range(req.get("mood_score", type=int))
-
-    if not req:
-        return jsonify({"msg": "Must provide valid parameters."})
-
-    if not current_user:
+    if not current_user.is_authenticated:
         return redirect("/login")
+
+    mood_score = int(args["mood_score"])
 
     current_user.update_streaks(method_type="POST")
     entry = MoodEntry(user_id=current_user.get_id(), mood_score=mood_score)
@@ -93,8 +91,8 @@ def post_mood():
 @app.route("/mood", methods=["GET"])
 def get_moods():
     """Gets all mood values for a particular user"""
-    if not current_user:
-        return redirect("/login")
+    if not current_user.is_authenticated:
+        abort(401)
 
     current_user.update_streaks(method_type="GET")
     db.session.commit()
@@ -110,46 +108,9 @@ def get_moods():
         "best_streak": current_user.get_best_streak(),
     }
 
-    percentile = _calculate_streak_percentile()
+    percentile = calculate_streak_percentile()
     if percentile >= 50:
         response.update({"percentile": percentile})
 
     return jsonify(response)
 
-
-def _create_user_helper(req):
-    if req.json:
-        username = req.json["username"]
-        email = req.json["email"]
-        password = req.json["password"]
-
-    else:
-        username = req.args.get("username", type=str)
-        email = req.args.get("email", type=str)
-        password = req.args.get("password", type=str)
-
-    return username, email, password
-
-
-def _calculate_streak_percentile():
-    scores_arr = [
-        user.best_streak
-        for user in db.session.query(User).order_by(User.best_streak).all()
-    ]
-
-    return _percentileofscore(scores_arr, current_user.get_best_streak())
-
-
-def _percentileofscore(scores_arr, score):
-    """Formula for percentile rank
-        PR = (L + (S / 2)) / N
-            L = values in array lower than score
-            S = values in array equal to score
-            N = total length of array
-        """
-    L = len([i for i in scores_arr if i < score])
-    S = len([i for i in scores_arr if i == score])
-    N = len(scores_arr)
-
-    percentile_rank = (L + (S / 2)) / N
-    return round(percentile_rank, 2) * 100

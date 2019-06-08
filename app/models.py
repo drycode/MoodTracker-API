@@ -1,12 +1,12 @@
 """This module stores all db models for the flask application."""
 
-from datetime import datetime, timedelta
 from collections import OrderedDict
+from datetime import datetime, timedelta
+
+from flask_login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
 
 from app import db, login
-from werkzeug.security import generate_password_hash, check_password_hash
-from flask_login import UserMixin
-from sqlalchemy import Date, cast
 
 
 STR_DATE_FRMT = "%b %d %Y %H:%M:%S"
@@ -25,7 +25,7 @@ class User(UserMixin, db.Model):
     password_hash = db.Column(db.String(258))
     current_streak = db.Column(db.Integer, default=0)
     best_streak = db.Column(db.Integer, default=0)
-    moods = db.relationship("MoodEntry", backref="author", lazy="dynamic")
+    moods = db.relationship("MoodEntry", backref="user", lazy="dynamic")
 
     def set_password(self, password):
         """Converts user provided password to a SHA256 hashed password."""
@@ -149,12 +149,3 @@ class MoodEntry(db.Model):
     def __repr__(self):
         return "<MoodEntry Score:{} Time:{}>".format(self.mood_score, self.timestamp)
 
-
-def _verify_mood_range(mood):
-    """Verifies that a mood_score instance is an integer of range 0-10"""
-    if not isinstance(mood, int):
-        raise TypeError
-    if 0 > mood or mood > 10:
-        raise ValueError
-    else:
-        return mood

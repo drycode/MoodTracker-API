@@ -1,8 +1,10 @@
 from datetime import datetime, timedelta
-from app.models import User, MoodEntry, _verify_mood_range, _check_should_update
-from app.routes import _percentileofscore
-from pytest import mark, raises
+
 import pytest
+from pytest import mark, raises
+
+from app.helpers import _percentileofscore
+from app.models import User, MoodEntry, _check_should_update
 
 
 @mark.parametrize(
@@ -24,26 +26,6 @@ def test__check_should_update_errors():
         _check_should_update(
             datetime.utcnow() - timedelta(days=99979797979797979797979797979)
         )
-
-
-@mark.parametrize(
-    "input, expected",
-    {
-        (1.0, TypeError),
-        ("0", TypeError),
-        (-01.345, TypeError),
-        (1.0, TypeError),
-        (11, ValueError),
-        (-1, ValueError),
-        (
-            1000000000000000000000000000000000000000000000000000000000000000000000000000000,
-            ValueError,
-        ),
-    },
-)
-def test__verify_mood_range(input, expected):
-    with pytest.raises(expected):
-        _verify_mood_range(input)
 
 
 @mark.parametrize(
