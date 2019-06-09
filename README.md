@@ -51,6 +51,14 @@ $ flask shell
 ## Run Unit Tests
 ```
 $ pytest
+============================= test session starts ==============================
+platform darwin -- Python 3.7.2, pytest-4.6.2, py-1.8.0, pluggy-0.12.0
+rootdir: ~/NeuroFlow
+collected 21 items
+
+tests/test_helpers.py ............                                       [ 57%]
+tests/test_models.py .........                                           [100%]
+========================== 21 passed in 0.51 seconds ===========================
 ```
 
 
