@@ -18,8 +18,6 @@ def check_server():
 @app.route("/login", methods=["POST", "GET"])
 def login():
     """Allows users to login"""
-    if current_user.is_authenticated:
-        return redirect("/mood")
 
     args = parser.parse(user_args, request)
 
@@ -40,10 +38,13 @@ def login():
         )
 
     login_user(user, remember=True)
-    if not user.check_password(args["password"]):
-        return jsonify("not a valid user")
+    if not current_user.check_password(args["password"]):
+        return jsonify("The password you entered was invalid.")
 
-    return redirect("/login")
+    if current_user.is_authenticated:
+        return redirect("/mood")
+
+    print("NO CONDITIONS WERE MET!")
 
 
 @app.route("/getuser")
@@ -69,14 +70,11 @@ def logout():
     return jsonify({"msg": "You have been logged out."})
 
 
-@login_required
 @app.route("/mood", methods=["POST"])
+@login_required
 def post_mood():
     """Posts a mood value to a persisted datastore"""
     args = parser.parse(mood_args, request)
-
-    if not current_user.is_authenticated:
-        return redirect("/login")
 
     mood_score = int(args["mood_score"])
 
@@ -87,13 +85,10 @@ def post_mood():
     return jsonify(entry.asdict())
 
 
-@login_required
 @app.route("/mood", methods=["GET"])
+@login_required
 def get_moods():
     """Gets all mood values for a particular user"""
-    if not current_user.is_authenticated:
-        abort(401)
-
     current_user.update_streaks(method_type="GET")
     db.session.commit()
 

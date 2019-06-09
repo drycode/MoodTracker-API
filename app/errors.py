@@ -2,6 +2,11 @@ from flask import jsonify
 from app import app, db
 
 
+@app.errorhandler(400)
+def handle_bad_request_error(error):
+    return jsonify({"errors": {error.name: error.description}}), 400
+
+
 @app.errorhandler(401)
 def handle_unauthorized_error(error):
     return jsonify({"errors": {error.name: error.description}}), 401
