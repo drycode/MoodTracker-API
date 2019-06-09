@@ -1,5 +1,5 @@
 """This module contains all routing information for the Flask server."""
-from flask import jsonify, redirect, request, abort
+from flask import jsonify, redirect, request
 from flask_login import current_user, login_user, login_required, logout_user
 from webargs.flaskparser import parser
 
@@ -43,8 +43,6 @@ def login():
 
     if current_user.is_authenticated:
         return redirect("/mood")
-
-    print("NO CONDITIONS WERE MET!")
 
 
 @app.route("/getuser")
@@ -108,4 +106,3 @@ def get_moods():
         response.update({"percentile": percentile})
 
     return jsonify(response)
-

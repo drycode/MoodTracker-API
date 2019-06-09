@@ -1,3 +1,5 @@
+"""Use of Webargs to validate incoming query parameters on routes."""
+
 from webargs import fields
 
 user_args = {

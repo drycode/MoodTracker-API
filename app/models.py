@@ -114,8 +114,7 @@ def _check_should_update(latest_entry_ts):
     if today - timedelta(days=1) == latest_post_day:
         return "Yesterday"
 
-    else:
-        return "Reset"
+    return "Reset"
 
 
 @login.user_loader
@@ -146,5 +145,6 @@ class MoodEntry(db.Model):
         return self.timestamp
 
     def __repr__(self):
+        """Returns instance of string to represent MoodEntry object."""
         return "<MoodEntry Score:{} Time:{}>".format(self.mood_score, self.timestamp)
 
