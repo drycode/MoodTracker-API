@@ -1,16 +1,13 @@
-# NeuroFlow Assessment Project
+# Mood Tracker API
 
 [![made-with-python](https://img.shields.io/badge/Made%20with-Python-1f425f.svg)](https://www.python.org/)
-> This repository features my solution to the NeuroFlow Assessment 
+> A REST API which allows users track their mood. 
 
-## Project Requirements
-
-1. Create a web REST application with a '/mood' endpoint, which when POSTed to persists the submitted mood value.
-2. Add a GET method to the '/mood' endpoint which returns all submitted mood values
-3. Add the ability for users to login. The GET method for the '/mood' endpoint should now only return values submitted by the logged-in user.
-4. Add to the body of the response for the ‘/mood’ endpoint the length of their current "streak". A user is on a “streak” if that user has submitted at least 1 mood rating for each consecutive day of that streak.
-5. Calculate the user's streak's percentile compared to other users, and if the percentile is >= 50%, return that percentile
-6. Containerize your application
+## Features
+1. Allows users to Login to their account, and privately submit their current mood to a persistent database. Users can view their mood entries over time.
+2. Users who submit at least 1 mood rating daily will maintain a "streak" (a measure of consecutive days in which they submitted to the app).
+3. The user's streak percentile compared to other users will be tracked, and if a user is in the 50% percentile, it will be retrievable
+4. The development server for the application is containerized using Docker
 
 
 ## Running Development Server
@@ -53,7 +50,6 @@ $ flask shell
 $ pytest
 ============================= test session starts ==============================
 platform darwin -- Python 3.7.2, pytest-4.6.2, py-1.8.0, pluggy-0.12.0
-rootdir: ~/NeuroFlow
 collected 21 items
 
 tests/test_helpers.py ............                                       [ 57%]
@@ -67,8 +63,8 @@ _--Docker can be installed from the [Docker website](https://docs.docker.com/doc
 
 
 ```sh
-$ docker build -t neuroflow:latest .
-$ docker run --name neuroflow --rm -p 5000:5000 --rm neuroflow:latest
+$ docker build -t moodtracker:latest .
+$ docker run --name moodtracker --rm -p 5000:5000 --rm moodtracker:latest
 ```
 
 

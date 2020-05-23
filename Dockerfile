@@ -2,7 +2,7 @@ FROM python:3.7-alpine3.9
 
 RUN apk add --no-cache gcc musl-dev
 RUN adduser -D -g '' admin
-WORKDIR /home/Neuroflow
+WORKDIR /home/MoodTracker
 
 COPY requirements.txt requirements.txt
 RUN python -m venv venv
